@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}PDF Merger - Professional PDF Toolkit{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Tool Header -->
+            <div class="text-center mb-4">
+                <div class="tool-icon-large mx-auto mb-3">
+                    <i class="ti ti-files"></i>
+                </div>
+                <h1 class="display-5 fw-bold mb-2">PDF Merger</h1>
+                <p class="lead text-muted">Combine multiple PDF files into one document</p>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="mergeForm">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">
+                            <i data-lucide="upload"></i>
+                        </div>
+                        <h3>Select PDF Files to Merge</h3>
+                        <p>Choose multiple PDF files to combine into one document</p>
+                        <input type="file" name="pdfs" id="pdfFiles" multiple accept=".pdf" required>
+                        <div class="file-list" id="fileList"></div>
+                        <button type="button" class="btn btn-outline" onclick="document.getElementById('pdfFiles').click()">
+                            Choose Files
+                        </button>
+                    </div>
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                                <i class="ti ti-files me-2"></i>Merge PDFs
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div class="row mt-5">
+                <div class="col-md-4 text-center mb-3">
+                    <div class="feature-icon mb-2">
+                        <i class="ti ti-stack text-primary"></i>
+                    </div>
+                    <h5>Multiple Files</h5>
+                    <p class="text-muted">Merge unlimited PDF files at once</p>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="feature-icon mb-2">
+                        <i class="ti ti-shield-check text-success"></i>
+                    </div>
+                    <h5>Secure Processing</h5>
+                    <p class="text-muted">Files processed safely and deleted after download</p>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="feature-icon mb-2">
+                        <i class="ti ti-download text-info"></i>
+                    </div>
+                    <h5>Instant Download</h5>
+                    <p class="text-muted">Get your merged PDF immediately</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.tool-icon-large {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tool-icon-large i {
+    font-size: 2.5rem;
+    color: white;
+}
+
+.feature-icon i {
+    font-size: 2rem;
+}
+
+.card {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.form-control-lg {
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+}
+
+.form-control-lg:focus {
+    border-color: #f093fb;
+    box-shadow: 0 0 0 0.2rem rgba(240, 147, 251, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    border-radius: 10px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('pdfFiles');
+    const fileList = document.getElementById('fileList');
+    const form = document.getElementById('mergeForm');
+
+    // File input change handler
+    fileInput.addEventListener('change', function() {
+        displaySelectedFiles();
+    });
+
+    // Drag and drop handlers
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.style.backgroundColor = '#f0f8ff';
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.style.backgroundColor = '';
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.style.backgroundColor = '';
+
+        const files = Array.from(e.dataTransfer.files).filter(file => 
+            file.type === 'application/pdf'
+        );
+
+        if (files.length > 0) {
+            const dt = new DataTransfer();
+            files.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+            displaySelectedFiles();
+        }
+    });
+
+    function displaySelectedFiles() {
+        const files = fileInput.files;
+        fileList.innerHTML = '';
+
+        if (files.length > 0) {
+            const ul = document.createElement('ul');
+            ul.style.marginTop = '10px';
+
+            for (let i = 0; i < files.length; i++) {
+                const li = document.createElement('li');
+                li.textContent = files[i].name;
+                li.style.padding = '5px';
+                li.style.backgroundColor = '#f8f9fa';
+                li.style.margin = '2px 0';
+                li.style.borderRadius = '4px';
+                ul.appendChild(li);
+            }
+
+            fileList.appendChild(ul);
+        }
+    }
+
+    // Form submission handler
+    form.addEventListener('submit', function(e) {
+        if (fileInput.files.length < 2) {
+            e.preventDefault();
+            alert('Please select at least 2 PDF files to merge.');
+        }
+    });
+});
+</script>
+{% endblock %}
