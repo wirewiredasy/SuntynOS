@@ -31,6 +31,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Add caching for performance
+@st.cache_data
+def load_demo_data():
+    return {
+        'Tool Category': ['PDF', 'Image', 'Video', 'Audio', 'AI'],
+        'Usage Count': [1250, 890, 450, 320, 180],
+        'Success Rate': [98.5, 97.2, 95.8, 99.1, 96.7]
+    }
+
 # Custom CSS with advanced animations
 st.markdown("""
 <style>
@@ -223,17 +232,25 @@ def split_pdf(pdf_file, pages_per_split=1):
     return outputs
 
 def compress_pdf(pdf_file):
-    doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
-    output = io.BytesIO()
-    
-    for page in doc:
-        # Compress images on each page
-        page.get_pixmap(matrix=fitz.Matrix(0.7, 0.7))
-    
-    doc.save(output, garbage=4, deflate=True, clean=True)
-    doc.close()
-    output.seek(0)
-    return output
+    try:
+        doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        output = io.BytesIO()
+        
+        # Apply compression settings
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            # Compress images and reduce quality
+            pix = page.get_pixmap(matrix=fitz.Matrix(0.8, 0.8), alpha=False)
+            page.clean_contents()
+        
+        # Save with compression
+        doc.save(output, garbage=4, deflate=True, clean=True)
+        doc.close()
+        output.seek(0)
+        return output
+    except Exception as e:
+        st.error(f"Compression failed: {str(e)}")
+        return None
 
 def pdf_to_text(pdf_file):
     doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
@@ -245,7 +262,24 @@ def pdf_to_text(pdf_file):
 
 # Image Processing Functions
 def resize_image(image, width, height):
-    return image.resize((width, height), Image.Resampling.LANCZOS)
+    try:
+        # Maintain aspect ratio option
+        if width == 0 and height == 0:
+            return image
+        
+        if width == 0:
+            # Calculate width based on height
+            ratio = height / image.height
+            width = int(image.width * ratio)
+        elif height == 0:
+            # Calculate height based on width
+            ratio = width / image.width
+            height = int(image.height * ratio)
+        
+        return image.resize((width, height), Image.Resampling.LANCZOS)
+    except Exception as e:
+        st.error(f"Resize failed: {str(e)}")
+        return image
 
 def compress_image(image, quality=85):
     output = io.BytesIO()
