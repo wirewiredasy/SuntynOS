@@ -1,0 +1,39 @@
+
+# Core Dependencies
+streamlit==1.31.0
+flask==3.0.0
+werkzeug==3.0.1
+
+# PDF Processing
+PyMuPDF==1.23.26
+PyPDF2==3.0.1
+pypdf==4.0.1
+reportlab==4.0.8
+
+# Image Processing
+Pillow==10.2.0
+opencv-python==4.9.0.80
+rembg==2.0.50
+
+# Video/Audio Processing
+moviepy==1.0.3
+pydub==0.25.1
+
+# AI/ML Tools
+scikit-learn==1.4.0
+nltk==3.8.1
+textblob==0.17.1
+
+# UI Components
+streamlit-option-menu==0.3.6
+streamlit-lottie==0.0.5
+plotly==5.17.0
+matplotlib==3.8.3
+seaborn==0.13.2
+pandas==2.1.4
+
+# Utilities
+qrcode==7.4.2
+python-barcode==0.15.1
+openpyxl==3.1.2
+requests==2.31.0

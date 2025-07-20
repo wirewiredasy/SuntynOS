@@ -1,7 +1,15 @@
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_option_menu import option_menu
-from streamlit_lottie import st_lottie
+try:
+    from streamlit_option_menu import option_menu
+except ImportError:
+    st.error("streamlit-option-menu not installed. Run: pip install streamlit-option-menu")
+    option_menu = None
+try:
+    from streamlit_lottie import st_lottie
+except ImportError:
+    st.warning("streamlit-lottie not installed. Animations disabled.")
+    st_lottie = None
 import requests
 import json
 import io
@@ -496,12 +504,14 @@ def main():
                     with st.spinner("Merging PDFs..."):
                         merged_pdf = merge_pdfs(uploaded_files)
                         st.success("✅ PDFs merged successfully!")
+                        merged_data = merged_pdf.read()
                         st.download_button(
                             label="📥 Download Merged PDF",
-                            data=merged_pdf.read(),
+                            data=merged_data,
                             file_name="merged_document.pdf",
                             mime="application/pdf"
                         )
+                        st.success(f"✅ File ready! Size: {len(merged_data)/1024:.1f} KB")
         
         elif pdf_tool == "Split PDF":
             st.markdown("### ✂️ Split PDF into Pages")

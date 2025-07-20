@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, send_file, jsonify, redirect,
 from werkzeug.utils import secure_filename
 import tempfile
 import uuid
+import re
 
 # Set up logging for debugging
 logging.basicConfig(level=logging.DEBUG)
