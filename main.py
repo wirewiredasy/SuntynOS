@@ -295,6 +295,38 @@ def download_file(filename):
         logging.error(f"Error downloading {filename}: {str(e)}")
         return "Download error", 500
 
+# Authentication Routes
+@app.route('/register')
+def register():
+    """User registration page"""
+    return render_template('auth/register.html')
+
+@app.route('/login')
+def login():
+    """User login page"""
+    return render_template('auth/login.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """User dashboard"""
+    # For now, redirect to main page with tools
+    return redirect(url_for('index'))
+
+@app.route('/logout')
+def logout():
+    """User logout"""
+    return redirect(url_for('index'))
+
+# Mock current_user for template context
+@app.context_processor
+def inject_user():
+    """Inject user context for templates"""
+    class MockUser:
+        is_authenticated = False
+        username = None
+    
+    return dict(current_user=MockUser())
+
 def process_file_by_tool(tool_id, input_file, form_data):
     """Process file based on tool type"""
     

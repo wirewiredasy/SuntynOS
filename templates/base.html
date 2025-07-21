@@ -1,0 +1,84 @@
+<!-- Ultra Professional Footer -->
+    <footer class="ultra-professional-footer text-white mt-5">
+        <!-- Decorative Top Border -->
+        <div class="footer-border-animation"></div>
+
+        <div class="container position-relative">
+            <!-- Floating Background Elements -->
+            <div class="footer-bg-elements">
+                <div class="floating-circle circle-1"></div>
+                <div class="floating-circle circle-2"></div>
+                <div class="floating-circle circle-3"></div>
+            </div>
+
+            <!-- Get Started Authentication Section -->
+            <div class="get-started-section mb-5 position-relative z-index-2">
+                <div class="row align-items-center">
+                    <div class="col-lg-8 mb-4 mb-lg-0">
+                        <div class="get-started-content">
+                            <div class="get-started-badge mb-3">
+                                <i class="ti ti-rocket me-2"></i>
+                                <span>Join 1M+ Professionals</span>
+                            </div>
+                            <h3 class="get-started-title mb-3">Ready to Transform Your Productivity?</h3>
+                            <p class="get-started-description mb-0">
+                                Join millions of professionals who trust Suntyn AI for their daily workflow automation. 
+                                Get instant access to 85+ premium tools, cloud storage, and AI-powered features.
+                            </p>
+                            <div class="get-started-features mt-3">
+                                <div class="feature-item">
+                                    <i class="ti ti-check-circle feature-icon"></i>
+                                    <span>Unlimited tool usage</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="ti ti-check-circle feature-icon"></i>
+                                    <span>Priority processing</span>
+                                </div>
+                                <div class="feature-item">
+                                    <i class="ti ti-check-circle feature-icon"></i>
+                                    <span>24/7 premium support</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="get-started-actions">
+                            {% if not current_user.is_authenticated %}
+                            <div class="auth-buttons-wrapper">
+                                <a href="{{ url_for('register') }}" class="btn btn-get-started primary mb-3">
+                                    <i class="ti ti-user-plus me-2"></i>
+                                    <span>Get Started Free</span>
+                                    <div class="btn-shine"></div>
+                                </a>
+                                <a href="{{ url_for('login') }}" class="btn btn-get-started secondary">
+                                    <i class="ti ti-login me-2"></i>
+                                    <span>Sign In</span>
+                                </a>
+                                <div class="auth-note mt-3">
+                                    <small class="text-light-gray">
+                                        <i class="ti ti-shield-check me-1"></i>
+                                        No credit card required • Start instantly
+                                    </small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="user-dashboard-actions">
+                                <a href="{{ url_for('dashboard') }}" class="btn btn-get-started primary mb-3">
+                                    <i class="ti ti-dashboard me-2"></i>
+                                    <span>Go to Dashboard</span>
+                                </a>
+                                <div class="user-welcome mt-3">
+                                    <p class="mb-1">Welcome back, <strong>{{ current_user.username }}</strong>!</p>
+                                    <small class="text-light-gray">Continue your productivity journey</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Footer Content -->
+            <div class="row mb-5 position-relative z-index-2">
+                <!-- Enhanced Company Branding -->
+                <div class="col-lg-4 col-md-6 mb-4">
