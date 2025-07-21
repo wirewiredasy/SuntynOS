@@ -421,68 +421,170 @@ def process_pdf_tool(tool_id, input_file, form_data):
         return {'success': False, 'error': f'PDF processing failed: {str(e)}'}
 
 def process_image_tool(tool_id, input_file, form_data):
-    """Process Image tools"""
+    """Process Image tools with enhanced error handling"""
     try:
-        from PIL import Image, ImageFilter, ImageEnhance
+        from PIL import Image, ImageFilter, ImageEnhance, ImageOps
         import io
         
-        # Open image
-        img = Image.open(input_file)
+        # Open image with error handling
+        try:
+            img = Image.open(input_file)
+            # Convert to RGB if necessary
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGBA')
+        except Exception as e:
+            return {'success': False, 'error': f'Invalid image file: {str(e)}'}
+        
+        # Safe parameter extraction with validation
+        def safe_int(value, default, min_val=1, max_val=10000):
+            try:
+                if value is None or value == '':
+                    return default
+                result = int(value)
+                return max(min_val, min(result, max_val))
+            except (ValueError, TypeError):
+                return default
+        
+        def safe_float(value, default, min_val=0.1, max_val=10.0):
+            try:
+                if value is None or value == '':
+                    return default
+                result = float(value)
+                return max(min_val, min(result, max_val))
+            except (ValueError, TypeError):
+                return default
+        
+        processed_img = img.copy()
         
         if tool_id == 'image-resize':
-            width = int(form_data.get('width', 800))
-            height = int(form_data.get('height', 600))
-            maintain_aspect = form_data.get('maintainAspect') == 'on'
+            width = safe_int(form_data.get('width'), img.width, 10, 5000)
+            height = safe_int(form_data.get('height'), img.height, 10, 5000)
+            maintain_aspect = form_data.get('maintainAspect') == 'true' or form_data.get('maintainAspect') == 'on'
             
             if maintain_aspect:
-                img.thumbnail((width, height), Image.Resampling.LANCZOS)
+                processed_img.thumbnail((width, height), Image.Resampling.LANCZOS)
             else:
-                img = img.resize((width, height), Image.Resampling.LANCZOS)
+                processed_img = processed_img.resize((width, height), Image.Resampling.LANCZOS)
             
         elif tool_id == 'image-compress':
-            quality = int(form_data.get('quality', 80))
             # Quality will be applied during save
+            pass
             
-        elif tool_id == 'image-grayscale':
-            img = img.convert('L')
+        elif tool_id == 'image-grayscale' or tool_id == 'grayscale-converter':
+            processed_img = processed_img.convert('L')
             
         elif tool_id == 'image-blur':
-            img = img.filter(ImageFilter.BLUR)
+            processed_img = processed_img.filter(ImageFilter.BLUR)
             
         elif tool_id == 'image-enhance':
-            enhancer = ImageEnhance.Sharpness(img)
-            img = enhancer.enhance(2.0)
+            enhancer = ImageEnhance.Sharpness(processed_img)
+            enhancement_factor = safe_float(form_data.get('enhancement_factor'), 2.0, 0.1, 5.0)
+            processed_img = enhancer.enhance(enhancement_factor)
             
         elif tool_id == 'image-rotate':
-            img = img.rotate(90, expand=True)
+            angle = safe_int(form_data.get('angle'), 90, -360, 360)
+            processed_img = processed_img.rotate(angle, expand=True, fillcolor='white')
             
         elif tool_id == 'image-flip':
-            img = img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            direction = form_data.get('direction', 'horizontal')
+            if direction == 'horizontal':
+                processed_img = processed_img.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            elif direction == 'vertical':
+                processed_img = processed_img.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
             
         elif tool_id == 'image-invert':
-            if img.mode == 'RGB':
-                r, g, b = img.split()
-                r = r.point(lambda x: 255 - x)
-                g = g.point(lambda x: 255 - x)
-                b = b.point(lambda x: 255 - x)
-                img = Image.merge('RGB', (r, g, b))
+            processed_img = ImageOps.invert(processed_img.convert('RGB'))
+            
+        elif tool_id == 'convert-jpg' or tool_id == 'convert-jpeg':
+            if processed_img.mode == 'RGBA':
+                # Create white background for JPEG
+                background = Image.new('RGB', processed_img.size, (255, 255, 255))
+                background.paste(processed_img, mask=processed_img.split()[-1] if processed_img.mode == 'RGBA' else None)
+                processed_img = background
+            elif processed_img.mode != 'RGB':
+                processed_img = processed_img.convert('RGB')
+                
+        elif tool_id == 'convert-png':
+            if processed_img.mode != 'RGBA':
+                processed_img = processed_img.convert('RGBA')
+                
+        elif tool_id == 'convert-webp':
+            # WebP supports both RGB and RGBA
+            pass
+            
+        elif tool_id == 'bg-remove' or tool_id == 'background-remover':
+            # Simple background removal using transparency
+            if processed_img.mode != 'RGBA':
+                processed_img = processed_img.convert('RGBA')
+            
+            # Convert to array for processing
+            import numpy as np
+            data = np.array(processed_img)
+            
+            # Simple white background removal
+            white_bg = (data[:, :, 0] > 240) & (data[:, :, 1] > 240) & (data[:, :, 2] > 240)
+            data[white_bg] = [255, 255, 255, 0]  # Make white areas transparent
+            
+            processed_img = Image.fromarray(data, 'RGBA')
         
-        # Save processed image
-        output_format = 'JPEG' if tool_id == 'convert-jpg' else 'PNG' if tool_id == 'convert-png' else 'WEBP' if tool_id == 'convert-webp' else img.format or 'PNG'
-        extension = '.jpg' if output_format == 'JPEG' else '.png' if output_format == 'PNG' else '.webp' if output_format == 'WEBP' else '.png'
+        # Determine output format and extension
+        if tool_id == 'convert-jpg' or tool_id == 'convert-jpeg':
+            output_format = 'JPEG'
+            extension = '.jpg'
+        elif tool_id == 'convert-png':
+            output_format = 'PNG'
+            extension = '.png'
+        elif tool_id == 'convert-webp':
+            output_format = 'WEBP'
+            extension = '.webp'
+        else:
+            # Default format based on original or PNG
+            output_format = processed_img.format or 'PNG'
+            if output_format == 'JPEG':
+                extension = '.jpg'
+            elif output_format == 'WEBP':
+                extension = '.webp'
+            else:
+                output_format = 'PNG'
+                extension = '.png'
         
+        # Generate output filename
         output_filename = f"processed_{uuid.uuid4()}{extension}"
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
         
+        # Save with appropriate settings
         save_kwargs = {}
         if output_format == 'JPEG':
-            save_kwargs['quality'] = int(form_data.get('quality', 80))
-            if img.mode == 'RGBA':
-                img = img.convert('RGB')
+            quality = safe_int(form_data.get('quality'), 85, 10, 100)
+            save_kwargs['quality'] = quality
+            save_kwargs['optimize'] = True
+            # Ensure RGB mode for JPEG
+            if processed_img.mode == 'RGBA':
+                background = Image.new('RGB', processed_img.size, (255, 255, 255))
+                background.paste(processed_img, mask=processed_img.split()[-1])
+                processed_img = background
+            elif processed_img.mode != 'RGB':
+                processed_img = processed_img.convert('RGB')
+        elif output_format == 'PNG':
+            save_kwargs['optimize'] = True
+        elif output_format == 'WEBP':
+            quality = safe_int(form_data.get('quality'), 90, 10, 100)
+            save_kwargs['quality'] = quality
+            save_kwargs['optimize'] = True
         
-        img.save(output_path, format=output_format, **save_kwargs)
-        return {'success': True, 'output_file': output_filename, 'filename': f'{tool_id}_processed{extension}'}
+        # Save the processed image
+        processed_img.save(output_path, format=output_format, **save_kwargs)
         
+        return {
+            'success': True, 
+            'output_file': output_filename, 
+            'filename': f'{tool_id}_processed{extension}',
+            'message': f'Image processed successfully with {tool_id}!'
+        }
+        
+    except ImportError as e:
+        logging.error(f"Missing library for image processing: {str(e)}")
+        return {'success': False, 'error': 'Image processing libraries not available. Please install Pillow.'}
     except Exception as e:
         logging.error(f"Image processing error: {str(e)}")
         return {'success': False, 'error': f'Image processing failed: {str(e)}'}
