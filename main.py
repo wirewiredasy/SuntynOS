@@ -1,19 +1,49 @@
 import os
 import logging
+import sys
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge
 import tempfile
 import uuid
 import re
+from datetime import datetime
 
-# Set up logging for debugging
-logging.basicConfig(level=logging.DEBUG)
+# Enhanced logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
-# Create the Flask app
+# Create the Flask app with security
 app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
+app.secret_key = os.environ.get("SESSION_SECRET", "prod-secret-key-" + str(uuid.uuid4()))
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+# Security headers
+@app.after_request
+def security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+# Error handlers
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(e):
+    return jsonify({'error': 'File too large. Maximum size is 100MB.'}), 413
+
+@app.errorhandler(500)
+def handle_internal_error(e):
+    logger.error(f"Internal server error: {str(e)}")
+    return jsonify({'error': 'Internal server error. Please try again.'}), 500
 
 # Tool categories and their tools
 TOOL_CATEGORIES = {
@@ -160,10 +190,37 @@ def tool_page(tool_id):
     return redirect(url_for('index'))
 
 # Tool Processing Routes
+# Rate limiting storage (in production, use Redis)
+request_counts = {}
+RATE_LIMIT = 10  # requests per minute per IP
+
+def rate_limit_check():
+    """Simple rate limiting"""
+    client_ip = request.environ.get('REMOTE_ADDR')
+    now = datetime.now()
+    minute_key = f"{client_ip}:{now.strftime('%Y-%m-%d-%H-%M')}"
+    
+    if minute_key in request_counts:
+        if request_counts[minute_key] >= RATE_LIMIT:
+            return False
+        request_counts[minute_key] += 1
+    else:
+        request_counts[minute_key] = 1
+    
+    # Clean old entries
+    old_keys = [k for k in request_counts.keys() if k.split(':')[1] != now.strftime('%Y-%m-%d-%H-%M')]
+    for key in old_keys:
+        del request_counts[key]
+    
+    return True
+
 @app.route('/process/<tool_id>', methods=['POST'])
 def process_tool(tool_id):
     """Process files with the specified tool"""
     try:
+        # Rate limiting
+        if not rate_limit_check():
+            return jsonify({'error': 'Rate limit exceeded. Please try again in a minute.'}), 429
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
 
@@ -195,6 +252,35 @@ def process_tool(tool_id):
     except Exception as e:
         logging.error(f"Error processing {tool_id}: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        from performance_monitor import get_system_stats
+        stats = get_system_stats()
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'system': stats,
+            'tools_available': len([tool for category in TOOL_CATEGORIES.values() for tool in category['tools']])
+        })
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+
+@app.route('/metrics')
+def metrics():
+    """Basic metrics endpoint"""
+    from performance_monitor import get_system_stats
+    stats = get_system_stats()
+    
+    return jsonify({
+        'uptime': time.time(),
+        'system_stats': stats,
+        'total_tools': len([tool for category in TOOL_CATEGORIES.values() for tool in category['tools']]),
+        'categories': len(TOOL_CATEGORIES)
+    })
 
 @app.route('/download/<filename>')
 def download_file(filename):
