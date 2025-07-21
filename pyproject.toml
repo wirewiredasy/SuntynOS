@@ -32,4 +32,7 @@ dependencies = [
     "streamlit-option-menu>=0.4.0",
     "streamlit-card>=1.0.2",
     "opencv-python>=4.11.0.86",
+    "psutil>=7.0.0",
+    "uuid>=1.30",
+    "fitz>=0.0.1.dev2",
 ]
