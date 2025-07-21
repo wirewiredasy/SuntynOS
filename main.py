@@ -1,4 +1,3 @@
-
 import os
 import logging
 from flask import Flask, render_template, request, send_file, jsonify, redirect, url_for
@@ -167,23 +166,23 @@ def process_tool(tool_id):
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
-        
+
         file = request.files['file']
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
+
         # Save uploaded file temporarily
         filename = secure_filename(file.filename)
         temp_input = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{filename}")
         file.save(temp_input)
-        
+
         # Process based on tool type
         result = process_file_by_tool(tool_id, temp_input, request.form)
-        
+
         # Clean up input file
         if os.path.exists(temp_input):
             os.remove(temp_input)
-        
+
         if result.get('success'):
             return jsonify({
                 'success': True,
@@ -192,7 +191,7 @@ def process_tool(tool_id):
             })
         else:
             return jsonify({'error': result.get('error', 'Processing failed')}), 500
-            
+
     except Exception as e:
         logging.error(f"Error processing {tool_id}: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -443,4 +442,6 @@ def process_govt_tool(tool_id, input_file, form_data):
         return {'success': False, 'error': f'Government document processing failed: {str(e)}'}
 
 if __name__ == '__main__':
+    print("🚀 Starting Flask PDF Toolkit...")
+    print("📱 App will be available at http://localhost:8080")
     app.run(host='0.0.0.0', port=8080, debug=True)
