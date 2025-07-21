@@ -442,6 +442,17 @@ def process_govt_tool(tool_id, input_file, form_data):
         return {'success': False, 'error': f'Government document processing failed: {str(e)}'}
 
 if __name__ == '__main__':
-    print("🚀 Starting Flask PDF Toolkit...")
-    print("📱 App will be available at http://localhost:8080")
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    import os
+    port = int(os.environ.get('PORT', 8080))
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    print("🚀 Starting SuntynAI Toolkit...")
+    print(f"📱 App will be available on port {port}")
+    
+    # Production-ready settings
+    app.run(
+        host='0.0.0.0', 
+        port=port, 
+        debug=debug_mode,
+        threaded=True
+    )
